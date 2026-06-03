@@ -1,36 +1,136 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# HOLYTASK — AI-powered Task Tracker
 
-## Getting Started
+Task tracker for engineering teams with an embedded AI agent layer that eliminates daily planning friction.
 
-First, run the development server:
+## Quick Start
 
 ```bash
+git clone <repo-url>
+cd holytasker
+npm install
+cp .env.example .env.local
+# Add your ANTHROPIC_API_KEY to .env.local — that's all that's required
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). On first run, 10 realistic seed tasks are inserted automatically.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Architecture
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+Next.js App Router (full-stack monorepo)
+├── src/app/
+│   ├── api/tasks/                 GET (filter+sort), POST
+│   ├── api/tasks/[id]/            GET, PATCH, DELETE
+│   ├── api/tasks/[id]/subtasks/   GET, POST
+│   ├── api/tasks/[id]/comments/   GET, POST (thread comments)
+│   ├── api/tasks/[id]/reactions/  GET, POST, DELETE (emoji reactions)
+│   ├── api/subtasks/[id]/         PATCH (toggle), DELETE
+│   ├── api/comments/[id]/         PATCH, DELETE
+│   ├── api/comments/[id]/reactions/ GET, POST, DELETE
+│   ├── api/ai/prioritize/         Prioritization agent
+│   ├── api/ai/decompose/          Decomposition agent (+ /confirm)
+│   ├── api/ai/chat/               Streaming AI chat
+│   ├── api/ai/runs/[id]/accept/   Record accept/dismiss
+│   ├── api/assignees/             Distinct assignee names from tasks
+│   ├── api/settings/ai/           AI provider key management
+│   └── api/integrations/slack/    Slack OAuth + send message
+├── src/lib/
+│   ├── db.ts                      SQLite singleton (better-sqlite3)
+│   ├── tasks.ts / subtasks.ts     CRUD functions
+│   ├── agent-runs.ts              Agent run step-level logging
+│   ├── aiSettings.ts              Per-user AI provider preferences
+│   ├── llm.ts                     Unified streaming client (5 providers)
+│   ├── seed.ts                    10 realistic seed tasks
+│   └── agents/
+│       ├── tools.ts               Tool implementations (pure functions)
+│       ├── prioritize.ts          Prioritization agent loop
+│       └── decompose.ts           Decomposition agent loop
+└── src/components/
+    ├── TaskCard.tsx               Task list item with progress bar
+    ├── TaskDetail.tsx             Task detail panel (inline editing)
+    ├── TaskThread.tsx             Comment thread with reactions
+    ├── ChatPanel.tsx              AI assistant chat (streaming)
+    ├── PrioritizePanel.tsx        AI prioritization UI
+    └── DecomposePanel.tsx         AI decomposition UI
+```
 
-## Learn More
+## Storage: SQLite via better-sqlite3
 
-To learn more about Next.js, take a look at the following resources:
+**Why SQLite:** Persistent across restarts, no external server, synchronous API (cleaner code at this scale), full SQL for filtering and sorting. Database lives at `data/devlog.db`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+**Schema includes:**
+- `tasks` — core task data with status, priority, assignee
+- `subtasks` — checklist items with cascade delete
+- `agent_runs` — every AI agent execution with step-level tool call tracing
+- `task_comments` — threaded discussion on tasks
+- `task_reactions` / `comment_reactions` — emoji reactions
+- `ai_settings` — per-user AI provider API keys and active selection
+- `user_integrations` — Slack OAuth tokens
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+**Limitations:** Not suitable for horizontal scaling (single-writer). Production path: PostgreSQL.
 
-## Deploy on Vercel
+## AI Features
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### A. Prioritization Agent
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Analyzes all active tasks and recommends what to work on today with explicit reasoning. **Genuine multi-step agent, not a single LLM call:**
+
+1. `list_active_tasks` → all todo/in-progress tasks
+2. `score_task(id)` for each → server computes `age_hours × priority_weight × status_weight`
+3. `get_task_details(id)` for top candidates → full context including subtasks
+4. Returns top-3 ranked with per-task reasoning + overall summary
+
+**Key design:** Scoring is deterministic on the server — avoids hallucinated math. The LLM receives pre-computed scores and provides human-readable reasoning. Every run logged to `agent_runs` with all tool calls, latency, and user acceptance.
+
+### B. Decomposition Agent
+
+Generates structured subtasks from a task title and description. **Two-branch flow based on clarity assessment:**
+
+**Vague task (clarity score < 0.65):**
+→ `get_task_details` → `assess_clarity` → returns clarifying questions → user answers → retry → `get_similar_tasks` → generate → `validate_subtasks` → preview
+
+**Clear task (clarity score ≥ 0.65):**
+→ `get_task_details` → `assess_clarity` → `get_similar_tasks` → generate → `validate_subtasks` → preview
+
+The 0.65 threshold is deliberately conservative: it triggers only when description is missing key signals (action verbs, technical scope, acceptance criteria). The conditional branch is the core proof of agentness — not just a linear sequence of calls.
+
+**Preview before write:** subtasks shown as editable list. DB write happens only after explicit user confirmation.
+
+### C. Status Update Generator
+
+Generates a concise async Slack-style update from the current task state. Accessible via **Send to Slack → ✦ Generate status update**. **Multi-step agent:**
+
+1. `get_task_details` → title, description, status, priority, assignee
+2. `get_subtask_progress` → how many subtasks done vs. remaining
+3. `get_recent_comments` → latest thread context (blockers, notes)
+4. Composes a 2-4 line update with appropriate emoji and tone
+
+Example output: *"🔄 Working on JWT refresh token rotation — 5/8 subtasks done. Currently implementing the token revocation logic. On track for today."*
+
+### D. AI Chat Assistant (Custom)
+
+Embedded streaming chat in the right panel. Has full context of all tasks at every message — status, priority, age, subtask progress. Useful for: standup updates, "what's blocked?", "explain task X", writing subtask acceptance criteria.
+
+Built with Anthropic streaming API (`streamChatCompletion`). Supports 5 providers via settings: Anthropic, OpenAI, Groq, Mistral, Google Gemini.
+
+## Extended Features (beyond brief scope)
+
+Built after the core requirements were met:
+
+- **Task comments** — threaded discussion with emoji reactions on each task
+- **Send to Slack** — posts formatted task summary to any Slack channel or DM
+- **Multi-provider AI** — configure API keys for 5 LLM providers in Settings; one active at a time
+- **Google OAuth** — optional, disabled if `AUTH_GOOGLE_ID` not set (app runs without login)
+
+## Environment Variables
+
+Only `ANTHROPIC_API_KEY` is required. All other variables are optional and enable additional features. See `.env.example` for details.
+
+## Known Limitations
+
+- **Single-writer SQLite** — acceptable for stated scope (one user, local dev)
+- **No real-time sync** — list refreshes on mutations, not WebSocket
+- **Clarity assessment is heuristic** — keyword-based, not semantic. May trigger clarification for edge-case tasks near the 0.65 threshold. Acknowledged trade-off documented in `AGENT_LOG.md`
+- **AI latency 3-10s** — loading states shown throughout
+- **Auth is optional** — app works without Google credentials; auth was added to enable Slack per-user token storage, not as a product requirement
