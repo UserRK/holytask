@@ -6,7 +6,7 @@ Task tracker for engineering teams with an embedded AI agent layer that eliminat
 
 ```bash
 git clone <repo-url>
-cd holytasker
+cd holytask
 npm install
 npm run dev
 ```
