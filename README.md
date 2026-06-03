@@ -13,7 +13,7 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000). On first run, 10 realistic seed tasks are inserted automatically.
 
-**To enable AI features:** Open **Settings** (top right) → AI Providers → paste your [Anthropic API key](https://console.anthropic.com) → Save → set as Active. No `.env` file required. Without a key, the app runs normally but all AI buttons are disabled with a tooltip explaining what's needed.
+**To enable AI features:** Open **Settings** (top right) → AI Providers → paste your API key → Save → set as Active. Without a key, the app runs normally but all AI buttons are visually disabled with a tooltip.
 
 ## Architecture
 
@@ -122,13 +122,32 @@ Built after the core requirements were met:
 - **Send to Slack** — posts formatted task summary to any Slack channel or DM
 - **Multi-provider AI** — configure API keys for 5 LLM providers in Settings; one active at a time
 
+## AI Provider Configuration
+
+HOLYTASK supports **5 AI providers** — Anthropic, OpenAI, Groq, Mistral, and Google Gemini. Switching providers is a first-class feature, not an afterthought: it's designed so teams can bring their own keys without touching config files.
+
+**Two ways to configure:**
+
+**1. Settings UI (recommended for interactive use)**  
+Open **Settings** → AI Providers → paste key → Save → set Active. Keys are stored locally in the SQLite database. The active provider powers all agents and the chat panel.
+
+**2. Environment variables (recommended for scripted/CI setups)**  
+Add to `.env.local`. The env key acts as a fallback when no provider is active in Settings:
+```
+ANTHROPIC_API_KEY=sk-ant-...   # recommended — full agent support
+OPENAI_API_KEY=sk-...
+GROQ_API_KEY=gsk_...
+MISTRAL_API_KEY=...
+GOOGLE_AI_API_KEY=AIza...
+```
+
+Both approaches coexist: Settings takes precedence, env is the fallback. See `.env.example` for all supported variables.
+
+> **Note on security:** Keys configured via Settings are stored as plain text in `data/devlog.db`. For a local dev tool this is acceptable — the threat model is the same as `.env.local`. A production version would encrypt keys at rest before storing.
+
 ## Environment Variables
 
-**No environment variables are required to run the app.** The app runs in single-user mode out of the box — no login, no setup.
-
-To configure via `.env.local` instead of the Settings UI (see `.env.example`):
-- `SLACK_CLIENT_ID` / `SLACK_CLIENT_SECRET` — required for Slack OAuth integration
-- `ANTHROPIC_API_KEY` — optional alternative to configuring the key in Settings UI
+No env vars are required. Only Slack integration needs credentials configured via `.env.local` (see `.env.example`).
 
 ## Known Limitations
 
