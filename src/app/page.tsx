@@ -31,6 +31,11 @@ export default function HomePage() {
   const [priorityRanks, setPriorityRanks] = useState<Record<string, number>>({})
   const [showSettings, setShowSettings] = useState(false)
   const [chatMessage, setChatMessage] = useState<string | null>(null)
+  const [aiAvailable, setAiAvailable] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/ai/config').then(r => r.json()).then(d => setAiAvailable(d.configured)).catch(() => {})
+  }, [])
   const isFirstLoad = useRef(true)
 
   const loadTasks = useCallback(async () => {
@@ -174,6 +179,7 @@ export default function HomePage() {
               <PrioritizePanel
                 onTaskClick={handleTaskClick}
                 onApply={ranks => setPriorityRanks(ranks)}
+                aiAvailable={aiAvailable}
               />
               {Object.keys(priorityRanks).length > 0 && (
                 <button
@@ -232,6 +238,7 @@ export default function HomePage() {
               onDeleted={() => { loadTasks(); setSelectedTask(null) }}
               onSendToChat={msg => setChatMessage(msg)}
               rank={priorityRanks[selectedTask.id]}
+              aiAvailable={aiAvailable}
             />
           ) : (
             <div className="flex flex-col items-center justify-center h-full gap-3" style={{ color: 'var(--text-muted)' }}>
@@ -246,6 +253,7 @@ export default function HomePage() {
         <ChatPanel
           pendingMessage={chatMessage}
           onPendingConsumed={() => setChatMessage(null)}
+          aiAvailable={aiAvailable}
         />
       </div>
 

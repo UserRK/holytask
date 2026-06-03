@@ -9,6 +9,7 @@ import { AssigneeSelect } from './AssigneeSelect'
 import { SlackSendModal } from './SlackSendModal'
 import { TaskThread } from './TaskThread'
 import { REACTION_EMOJIS } from '@/lib/emojis'
+import { AiGate } from './AiGate'
 
 interface Props {
   task: Task
@@ -17,6 +18,7 @@ interface Props {
   onDeleted: () => void
   onSendToChat?: (message: string) => void
   rank?: number
+  aiAvailable?: boolean
 }
 
 const RANK_COLORS = ['#f59e0b', '#94a3b8', '#cd7c54']
@@ -166,7 +168,7 @@ function PriorityPicker({ value, onChange }: { value: TaskPriorityType; onChange
   )
 }
 
-export function TaskDetail({ task, onClose, onUpdated, onDeleted, onSendToChat, rank }: Props) {
+export function TaskDetail({ task, onClose, onUpdated, onDeleted, onSendToChat, rank, aiAvailable = true }: Props) {
   const [status, setStatus] = useState<TaskStatusType>(task.status)
   const [priority, setPriority] = useState<TaskPriorityType>(task.priority)
   const [assignee, setAssignee] = useState(task.assignee ?? '')
@@ -373,22 +375,26 @@ export function TaskDetail({ task, onClose, onUpdated, onDeleted, onSendToChat, 
 
         {/* Quick actions */}
         <div className="flex items-center justify-between gap-2 px-6 py-2" style={{ borderTop: '1px solid var(--border)' }}>
-          <button
-            onClick={() => setShowDecompose(v => !v)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-opacity hover:opacity-80"
-            style={{ backgroundColor: showDecompose ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.1)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.3)' }}>
-            ✦ AI Generate Subtasks
-          </button>
-          <div className="flex items-center gap-2">
+          <AiGate available={aiAvailable}>
             <button
-              onClick={() => {
-                const msg = `Analyze this task and give me recommendations:\n\n**${task.title}**${localDescription ? `\n\n${localDescription}` : ''}\n\nStatus: ${status} | Priority: ${priority}`
-                onSendToChat?.(msg)
-              }}
+              onClick={() => setShowDecompose(v => !v)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-opacity hover:opacity-80"
-              style={{ backgroundColor: 'rgba(99,102,241,0.12)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.25)' }}>
-              ✦ Send to Assistant
+              style={{ backgroundColor: showDecompose ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.1)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.3)' }}>
+              ✦ AI Generate Subtasks
             </button>
+          </AiGate>
+          <div className="flex items-center gap-2">
+            <AiGate available={aiAvailable}>
+              <button
+                onClick={() => {
+                  const msg = `Analyze this task and give me recommendations:\n\n**${task.title}**${localDescription ? `\n\n${localDescription}` : ''}\n\nStatus: ${status} | Priority: ${priority}`
+                  onSendToChat?.(msg)
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-opacity hover:opacity-80"
+                style={{ backgroundColor: 'rgba(99,102,241,0.12)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.25)' }}>
+                ✦ Send to Assistant
+              </button>
+            </AiGate>
             <button onClick={() => setShowSlackModal(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-opacity hover:opacity-80"
               style={{ backgroundColor: 'rgba(74,21,75,0.25)', color: '#d4a0d6', border: '1px solid #d4a0d6' }}>
@@ -610,13 +616,15 @@ export function TaskDetail({ task, onClose, onUpdated, onDeleted, onSendToChat, 
                 </span>
                 <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                   {/* Send to Assistant */}
-                  <button
-                    onClick={() => onSendToChat?.(`Help me complete this subtask:\n\n**${s.title}**\n\nParent task: ${task.title}${localDescription ? `\n\n${localDescription}` : ''}`)}
-                    className="text-xs transition-opacity hover:opacity-70"
-                    style={{ color: '#818cf8', background: 'none', border: 'none' }}
-                  >
-                    ✦ Send to Assistant
-                  </button>
+                  <AiGate available={aiAvailable}>
+                    <button
+                      onClick={() => onSendToChat?.(`Help me complete this subtask:\n\n**${s.title}**\n\nParent task: ${task.title}${localDescription ? `\n\n${localDescription}` : ''}`)}
+                      className="text-xs transition-opacity hover:opacity-70"
+                      style={{ color: '#818cf8', background: 'none', border: 'none' }}
+                    >
+                      ✦ Send to Assistant
+                    </button>
+                  </AiGate>
                   <button onClick={() => handleDeleteSubtask(s.id)}
                     className="text-xs"
                     style={{ color: '#f87171' }}>

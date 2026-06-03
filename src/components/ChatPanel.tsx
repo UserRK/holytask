@@ -17,9 +17,10 @@ const SUGGESTED = [
 interface Props {
   pendingMessage?: string | null
   onPendingConsumed?: () => void
+  aiAvailable?: boolean
 }
 
-export function ChatPanel({ pendingMessage, onPendingConsumed }: Props) {
+export function ChatPanel({ pendingMessage, onPendingConsumed, aiAvailable = true }: Props) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
@@ -129,7 +130,14 @@ export function ChatPanel({ pendingMessage, onPendingConsumed }: Props) {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-        {messages.length === 0 ? (
+        {!aiAvailable ? (
+          <div className="flex flex-col items-center justify-center h-full gap-2 px-4 text-center">
+            <span style={{ fontSize: '28px', opacity: 0.3 }}>✦</span>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              Add an Anthropic API key in <strong>Settings</strong> to use the AI assistant
+            </p>
+          </div>
+        ) : messages.length === 0 ? (
           <div className="space-y-3">
             <p className="text-xs text-center" style={{ color: 'var(--text-muted)' }}>
               Ask anything about your tasks
@@ -209,7 +217,7 @@ export function ChatPanel({ pendingMessage, onPendingConsumed }: Props) {
             onKeyDown={handleKeyDown}
             placeholder="Ask about your tasks..."
             rows={1}
-            disabled={streaming}
+            disabled={streaming || !aiAvailable}
             className="flex-1 resize-none outline-none text-xs leading-relaxed"
             style={{
               backgroundColor: 'transparent',
@@ -219,7 +227,7 @@ export function ChatPanel({ pendingMessage, onPendingConsumed }: Props) {
           />
           <button
             onClick={() => send(input)}
-            disabled={!input.trim() || streaming}
+            disabled={!input.trim() || streaming || !aiAvailable}
             className="flex-shrink-0 w-6 h-6 rounded-lg flex items-center justify-center transition-opacity disabled:opacity-30"
             style={{ backgroundColor: '#6366f1' }}
           >

@@ -1,12 +1,11 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createAgentRun, type AgentStep } from '@/lib/agent-runs'
+import { getAgentApiKey } from '@/lib/apiAuth'
 import {
   tool_list_active_tasks,
   tool_score_task,
   tool_get_task_details,
 } from './tools'
-
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 const TOOLS: Anthropic.Tool[] = [
   {
@@ -62,6 +61,10 @@ function executeTool(name: string, input: Record<string, unknown>): unknown {
 }
 
 export async function runPrioritizationAgent(): Promise<PrioritizeResult> {
+  const apiKey = await getAgentApiKey()
+  if (!apiKey) throw new Error('No AI API key configured. Add your Anthropic key in Settings.')
+  const client = new Anthropic({ apiKey })
+
   const steps: AgentStep[] = []
   const startTime = Date.now()
 

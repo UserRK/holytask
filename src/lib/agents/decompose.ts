@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createAgentRun, type AgentStep } from '@/lib/agent-runs'
+import { getAgentApiKey } from '@/lib/apiAuth'
 import {
   tool_get_task_details,
   tool_assess_clarity,
@@ -7,7 +8,6 @@ import {
   tool_validate_subtasks,
 } from './tools'
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 const TOOLS: Anthropic.Tool[] = [
   {
@@ -89,6 +89,9 @@ export async function runDecompositionAgent(
   taskId: string,
   userClarification?: string
 ): Promise<DecomposeResponse> {
+  const apiKey = await getAgentApiKey()
+  if (!apiKey) throw new Error('No AI API key configured. Add your Anthropic key in Settings.')
+  const client = new Anthropic({ apiKey })
   const steps: AgentStep[] = []
   const startTime = Date.now()
 

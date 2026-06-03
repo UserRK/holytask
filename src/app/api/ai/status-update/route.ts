@@ -3,8 +3,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { getTaskById } from '@/lib/tasks'
 import { getSubtasksByTaskId } from '@/lib/subtasks'
 import { getDb } from '@/lib/db'
-
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+import { getAgentApiKey } from '@/lib/apiAuth'
 
 const TOOLS: Anthropic.Tool[] = [
   {
@@ -81,6 +80,10 @@ export async function POST(req: NextRequest) {
   try {
     const { task_id } = await req.json()
     if (!task_id) return NextResponse.json({ error: 'task_id required' }, { status: 400 })
+
+    const apiKey = await getAgentApiKey()
+    if (!apiKey) return NextResponse.json({ error: 'No AI API key configured. Add your Anthropic key in Settings.' }, { status: 400 })
+    const client = new Anthropic({ apiKey })
 
     const messages: Anthropic.MessageParam[] = [
       {

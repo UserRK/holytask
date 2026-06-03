@@ -8,12 +8,12 @@ Task tracker for engineering teams with an embedded AI agent layer that eliminat
 git clone <repo-url>
 cd holytasker
 npm install
-cp .env.example .env.local
-# Add your ANTHROPIC_API_KEY to .env.local — that's all that's required
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000). On first run, 10 realistic seed tasks are inserted automatically.
+
+**To enable AI features:** Open **Settings** (top right) → AI Providers → paste your [Anthropic API key](https://console.anthropic.com) → Save → set as Active. No `.env` file required. Without a key, the app runs normally but all AI buttons are disabled with a tooltip explaining what's needed.
 
 ## Architecture
 
@@ -125,7 +125,12 @@ Built after the core requirements were met:
 
 ## Environment Variables
 
-Only `ANTHROPIC_API_KEY` is required. All other variables are optional and enable additional features. See `.env.example` for details.
+**No environment variables are required to run the app.** API keys are configured through the Settings UI in the app itself and stored locally in the SQLite database.
+
+Optional `.env.local` variables (see `.env.example`):
+- `ANTHROPIC_API_KEY` — alternative to Settings UI; useful for automated setups
+- `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` — enables Google Sign-In
+- `SLACK_CLIENT_ID` / `SLACK_CLIENT_SECRET` — enables Slack OAuth integration
 
 ## Known Limitations
 

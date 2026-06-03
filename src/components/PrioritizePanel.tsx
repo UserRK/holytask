@@ -25,12 +25,13 @@ type Stage =
 interface Props {
   onTaskClick: (taskId: string) => void
   onApply: (ranks: Record<string, number>) => void
+  aiAvailable?: boolean
 }
 
 const rankColors = ['#f59e0b', '#94a3b8', '#cd7c54']
 const rankLabels = ['Start here', 'Then this', 'After that']
 
-export function PrioritizePanel({ onTaskClick, onApply }: Props) {
+export function PrioritizePanel({ onTaskClick, onApply, aiAvailable = true }: Props) {
   const [stage, setStage] = useState<Stage>({ type: 'idle' })
 
   async function run() {
@@ -77,8 +78,9 @@ export function PrioritizePanel({ onTaskClick, onApply }: Props) {
       {/* Trigger button — always visible */}
       <button
         onClick={run}
-        disabled={stage.type === 'loading'}
-        className="flex-shrink-0 px-3 py-2 rounded-lg text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-60 flex items-center gap-1.5"
+        disabled={stage.type === 'loading' || !aiAvailable}
+        title={!aiAvailable ? 'Add an Anthropic API key in Settings to use AI features' : undefined}
+        className="flex-shrink-0 px-3 py-2 rounded-lg text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-40 flex items-center gap-1.5"
         style={{ backgroundColor: '#6366f1', color: '#fff', border: 'none' }}
       >
         {stage.type === 'loading' ? (
