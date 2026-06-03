@@ -13,7 +13,7 @@ interface Props {
   rank?: number
 }
 
-const RANK_COLORS = ['#f59e0b', '#94a3b8', '#cd7c54']
+const RANK_COLORS = ['#eab308', '#94a3b8', '#cd7c54']
 
 function timeAgo(timestamp: number): string {
   const diff = Date.now() - timestamp

@@ -17,9 +17,10 @@ interface AiSetting {
 
 interface Props {
   onClose: () => void
+  onProviderActivated?: () => void
 }
 
-export function SettingsModal({ onClose }: Props) {
+export function SettingsModal({ onClose, onProviderActivated }: Props) {
   const [slack, setSlack] = useState<SlackStatus | null>(null)
   const [disconnecting, setDisconnecting] = useState(false)
   const [aiSettings, setAiSettings] = useState<AiSetting[]>([])
@@ -69,6 +70,7 @@ export function SettingsModal({ onClose }: Props) {
     await fetch(`/api/settings/ai/${providerId}`, { method: 'PATCH' })
     setAiSettings(prev => prev.map(s => ({ ...s, is_active: s.provider === providerId ? 1 : 0 })))
     setActivating(null)
+    onProviderActivated?.()
   }
 
   async function handleDeleteAi(providerId: string) {
@@ -161,13 +163,18 @@ export function SettingsModal({ onClose }: Props) {
                         >
                           {isActive && <span style={{ width: 4, height: 4, borderRadius: '50%', backgroundColor: '#fff', display: 'block' }} />}
                         </button>
-                        <span className="text-sm" style={{ color: 'var(--text)' }}>{p.name}</span>
-                        {isActive && (
-                          <span className="text-xs px-1.5 py-0.5 rounded font-medium"
-                            style={{ backgroundColor: 'var(--green-bg)', color: 'var(--green)', fontSize: '10px', border: '1px solid rgba(88,178,110,0.3)' }}>
-                            Active
-                          </span>
-                        )}
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm" style={{ color: 'var(--text)' }}>{p.name}</span>
+                            {isActive && (
+                              <span className="text-xs px-1.5 py-0.5 rounded font-medium"
+                                style={{ backgroundColor: 'var(--green-bg)', color: 'var(--green)', fontSize: '10px', border: '1px solid rgba(88,178,110,0.3)' }}>
+                                Active
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-xs" style={{ color: 'var(--text-muted)', fontSize: '10px' }}>{p.capabilities}</span>
+                        </div>
                       </div>
                       {saved && (
                         <div className="flex items-center gap-2">

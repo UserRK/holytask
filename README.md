@@ -40,7 +40,8 @@ Next.js App Router (full-stack monorepo)
 │   ├── tasks.ts / subtasks.ts     CRUD functions
 │   ├── agent-runs.ts              Agent run step-level logging
 │   ├── aiSettings.ts              Per-user AI provider preferences
-│   ├── llm.ts                     Unified streaming client (5 providers)
+│   ├── agentRunner.ts             Unified agent loop (Anthropic + OpenAI tool protocols)
+│   ├── llm.ts                     Unified streaming client (Anthropic + OpenAI)
 │   ├── seed.ts                    10 realistic seed tasks
 │   └── agents/
 │       ├── tools.ts               Tool implementations (pure functions)
@@ -112,7 +113,7 @@ Example output: *"🔄 Working on JWT refresh token rotation — 5/8 subtasks do
 
 Embedded streaming chat in the right panel. Has full context of all tasks at every message — status, priority, age, subtask progress. Useful for: standup updates, "what's blocked?", "explain task X", writing subtask acceptance criteria.
 
-Built with Anthropic streaming API (`streamChatCompletion`). Supports 5 providers via settings: Anthropic, OpenAI, Groq, Mistral, Google Gemini.
+Built with the unified `streamChatCompletion` client. Works with both configured providers: Anthropic and OpenAI.
 
 ## Extended Features (beyond brief scope)
 
@@ -120,28 +121,27 @@ Built after the core requirements were met:
 
 - **Task comments** — threaded discussion with emoji reactions on each task
 - **Send to Slack** — posts formatted task summary to any Slack channel or DM
-- **Multi-provider AI** — configure API keys for 5 LLM providers in Settings; one active at a time
+- **Multi-provider AI** — configure Anthropic or OpenAI keys in Settings; both power all agents and chat
 
 ## AI Provider Configuration
 
-HOLYTASK supports **5 AI providers** — Anthropic, OpenAI, Groq, Mistral, and Google Gemini. Switching providers is a first-class feature, not an afterthought: it's designed so teams can bring their own keys without touching config files.
+HOLYTASK supports **Anthropic** and **OpenAI** — both providers power all features: the prioritization agent, decomposition agent, status update generator, and chat assistant.
+
+The agent layer uses a unified `runAgentLoop` abstraction ([src/lib/agentRunner.ts](src/lib/agentRunner.ts)) that handles both Anthropic's `tool_use` / `tool_result` protocol and OpenAI's function calling format. Switching providers requires no code changes.
 
 **Two ways to configure:**
 
-**1. Settings UI (recommended for interactive use)**  
-Open **Settings** → AI Providers → paste key → Save → set Active. Keys are stored locally in the SQLite database. The active provider powers all agents and the chat panel.
+**1. Settings UI (recommended)**  
+Open **Settings** → AI Providers → paste key → Save → set Active. Keys are stored locally in the SQLite database.
 
-**2. Environment variables (recommended for scripted/CI setups)**  
-Add to `.env.local`. The env key acts as a fallback when no provider is active in Settings:
+**2. Environment variables (fallback)**  
+Add to `.env.local`. Used when no provider is active in Settings:
 ```
-ANTHROPIC_API_KEY=sk-ant-...   # recommended — full agent support
+ANTHROPIC_API_KEY=sk-ant-...
 OPENAI_API_KEY=sk-...
-GROQ_API_KEY=gsk_...
-MISTRAL_API_KEY=...
-GOOGLE_AI_API_KEY=AIza...
 ```
 
-Both approaches coexist: Settings takes precedence, env is the fallback. See `.env.example` for all supported variables.
+Settings takes precedence; env is the fallback. See `.env.example` for reference.
 
 > **Note on security:** Keys configured via Settings are stored as plain text in `data/devlog.db`. For a local dev tool this is acceptable — the threat model is the same as `.env.local`. A production version would encrypt keys at rest before storing.
 

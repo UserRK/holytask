@@ -1,22 +1,22 @@
-import Anthropic from '@anthropic-ai/sdk'
 import { createAgentRun, type AgentStep } from '@/lib/agent-runs'
-import { getAgentApiKey } from '@/lib/apiAuth'
+import { getActiveProvider } from '@/lib/apiAuth'
+import { runAgentLoop, type AgentTool } from '@/lib/agentRunner'
 import {
   tool_list_active_tasks,
   tool_score_task,
   tool_get_task_details,
 } from './tools'
 
-const TOOLS: Anthropic.Tool[] = [
+const TOOLS: AgentTool[] = [
   {
     name: 'list_active_tasks',
     description: 'Returns all active (todo and in-progress) tasks with their id, title, status, priority, and created_at timestamp.',
-    input_schema: { type: 'object', properties: {}, required: [] },
+    parameters: { type: 'object', properties: {}, required: [] },
   },
   {
     name: 'score_task',
     description: 'Calculates an urgency score for a task based on age, priority weight, and status weight. Also returns subtask progress.',
-    input_schema: {
+    parameters: {
       type: 'object',
       properties: { task_id: { type: 'string', description: 'The task ID to score' } },
       required: ['task_id'],
@@ -25,7 +25,7 @@ const TOOLS: Anthropic.Tool[] = [
   {
     name: 'get_task_details',
     description: 'Gets full details of a task including description and subtasks. Use for top candidates to understand context.',
-    input_schema: {
+    parameters: {
       type: 'object',
       properties: { task_id: { type: 'string', description: 'The task ID to get details for' } },
       required: ['task_id'],
@@ -61,17 +61,16 @@ function executeTool(name: string, input: Record<string, unknown>): unknown {
 }
 
 export async function runPrioritizationAgent(): Promise<PrioritizeResult> {
-  const apiKey = await getAgentApiKey()
-  if (!apiKey) throw new Error('No AI API key configured. Add your Anthropic key in Settings.')
-  const client = new Anthropic({ apiKey })
+  const providerInfo = await getActiveProvider()
+  if (!providerInfo) throw new Error('No AI API key configured. Add a key in Settings.')
 
   const steps: AgentStep[] = []
   const startTime = Date.now()
 
-  const messages: Anthropic.MessageParam[] = [
-    {
-      role: 'user',
-      content: `You are a task prioritization agent for an engineering team.
+  const rawText = await runAgentLoop({
+    ...providerInfo,
+    tools: TOOLS,
+    userMessage: `You are a task prioritization agent for an engineering team.
 
 Your job:
 1. List all active tasks using list_active_tasks
@@ -93,42 +92,9 @@ Return JSON in this exact format:
   ],
   "summary": "One sentence explaining the overall priority logic for today"
 }`,
-    },
-  ]
-
-  let response = await client.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 2000,
-    tools: TOOLS,
-    messages,
+    executor: executeTool,
+    onStep: step => steps.push(step),
   })
-
-  while (response.stop_reason === 'tool_use') {
-    const toolUseBlocks = response.content.filter(
-      (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use'
-    )
-
-    const toolResults: Anthropic.ToolResultBlockParam[] = []
-
-    for (const block of toolUseBlocks) {
-      const result = executeTool(block.name, block.input as Record<string, unknown>)
-      steps.push({ tool: block.name, input: block.input, output: result })
-      toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(result) })
-    }
-
-    messages.push({ role: 'assistant', content: response.content })
-    messages.push({ role: 'user', content: toolResults })
-
-    response = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 2000,
-      tools: TOOLS,
-      messages,
-    })
-  }
-
-  const textBlock = response.content.find((b): b is Anthropic.TextBlock => b.type === 'text')
-  const rawText = textBlock?.text ?? '{}'
 
   let parsed: { recommendations: PriorityRecommendation[]; summary: string }
   try {

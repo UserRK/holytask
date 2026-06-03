@@ -30,7 +30,7 @@ export async function* streamChatCompletion(
     return
   }
 
-  // OpenAI-compatible providers: openai, groq, mistral, google
+  // OpenAI-compatible providers: openai, google
   const def = getProvider(provider)
   if (!def?.baseURL) throw new Error(`Unknown provider: ${provider}`)
 
@@ -49,7 +49,11 @@ export async function* streamChatCompletion(
 }
 
 export function getFallbackProvider(): { provider: string; apiKey: string; model: string } | null {
-  const key = process.env.ANTHROPIC_API_KEY
-  if (!key) return null
-  return { provider: 'anthropic', apiKey: key, model: 'claude-sonnet-4-6' }
+  if (process.env.ANTHROPIC_API_KEY) {
+    return { provider: 'anthropic', apiKey: process.env.ANTHROPIC_API_KEY, model: 'claude-sonnet-4-6' }
+  }
+  if (process.env.OPENAI_API_KEY) {
+    return { provider: 'openai', apiKey: process.env.OPENAI_API_KEY, model: 'gpt-4o' }
+  }
+  return null
 }

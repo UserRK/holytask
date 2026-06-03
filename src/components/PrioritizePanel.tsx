@@ -28,7 +28,7 @@ interface Props {
   aiAvailable?: boolean
 }
 
-const rankColors = ['#f59e0b', '#94a3b8', '#cd7c54']
+const rankColors = ['#eab308', '#94a3b8', '#cd7c54']
 const rankLabels = ['Start here', 'Then this', 'After that']
 
 export function PrioritizePanel({ onTaskClick, onApply, aiAvailable = true }: Props) {

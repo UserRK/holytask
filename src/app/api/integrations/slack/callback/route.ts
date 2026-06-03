@@ -7,12 +7,18 @@ export async function GET(req: NextRequest) {
   const { user, error } = await requireUser()
   if (error) return error
 
+  const state = req.nextUrl.searchParams.get('state')
+  const savedState = req.cookies.get('slack_oauth_state')?.value
+  if (!state || !savedState || state !== savedState) {
+    return NextResponse.redirect(new URL('/?slack=error', req.url))
+  }
+
   const code = req.nextUrl.searchParams.get('code')
   if (!code) {
     return NextResponse.redirect(new URL('/?slack=error', req.url))
   }
 
-  const redirectUri = `${process.env.NEXTAUTH_URL ?? 'http://localhost:3001'}/api/integrations/slack/callback`
+  const redirectUri = `${process.env.NEXTAUTH_URL ?? 'http://localhost:3000'}/api/integrations/slack/callback`
 
   const res = await fetch('https://slack.com/api/oauth.v2.access', {
     method: 'POST',
@@ -52,5 +58,7 @@ export async function GET(req: NextRequest) {
     Date.now(),
   )
 
-  return NextResponse.redirect(new URL('/?slack=connected', req.url))
+  const redirectResponse = NextResponse.redirect(new URL('/?slack=connected', req.url))
+  redirectResponse.cookies.delete('slack_oauth_state')
+  return redirectResponse
 }

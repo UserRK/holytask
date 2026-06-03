@@ -22,7 +22,7 @@ interface Props {
   slackConnected?: boolean
 }
 
-const RANK_COLORS = ['#f59e0b', '#94a3b8', '#cd7c54']
+const RANK_COLORS = ['#eab308', '#94a3b8', '#cd7c54']
 const RANK_LABELS = ['🥇', '🥈', '🥉']
 
 async function patchTask(id: string, data: Partial<Task>) {

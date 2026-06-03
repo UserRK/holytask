@@ -264,7 +264,12 @@ export default function HomePage() {
         <CreateTaskModal onClose={() => setShowCreate(false)} onCreated={loadTasks} />
       )}
       {showSettings && (
-        <SettingsModal onClose={() => setShowSettings(false)} />
+        <SettingsModal
+          onClose={() => setShowSettings(false)}
+          onProviderActivated={() =>
+            fetch('/api/ai/config').then(r => r.json()).then(d => setAiAvailable(d.configured)).catch(() => {})
+          }
+        />
       )}
     </div>
   )

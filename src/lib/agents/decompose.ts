@@ -1,6 +1,6 @@
-import Anthropic from '@anthropic-ai/sdk'
 import { createAgentRun, type AgentStep } from '@/lib/agent-runs'
-import { getAgentApiKey } from '@/lib/apiAuth'
+import { getActiveProvider } from '@/lib/apiAuth'
+import { runAgentLoop, type AgentTool } from '@/lib/agentRunner'
 import {
   tool_get_task_details,
   tool_assess_clarity,
@@ -8,12 +8,11 @@ import {
   tool_validate_subtasks,
 } from './tools'
 
-
-const TOOLS: Anthropic.Tool[] = [
+const TOOLS: AgentTool[] = [
   {
     name: 'get_task_details',
     description: 'Gets full details of a task including title, description, and existing subtasks.',
-    input_schema: {
+    parameters: {
       type: 'object',
       properties: { task_id: { type: 'string' } },
       required: ['task_id'],
@@ -22,7 +21,7 @@ const TOOLS: Anthropic.Tool[] = [
   {
     name: 'assess_clarity',
     description: 'Assesses how clear and actionable a task description is. Returns a score 0-1 and a list of gaps.',
-    input_schema: {
+    parameters: {
       type: 'object',
       properties: {
         title: { type: 'string' },
@@ -34,7 +33,7 @@ const TOOLS: Anthropic.Tool[] = [
   {
     name: 'get_similar_tasks',
     description: 'Finds similar tasks in the database by keywords to provide context for decomposition.',
-    input_schema: {
+    parameters: {
       type: 'object',
       properties: {
         keywords: { type: 'array', items: { type: 'string' }, description: '2-4 keywords from the task' },
@@ -45,7 +44,7 @@ const TOOLS: Anthropic.Tool[] = [
   {
     name: 'validate_subtasks',
     description: 'Validates generated subtasks for duplicates and minimum quality. Returns cleaned list.',
-    input_schema: {
+    parameters: {
       type: 'object',
       properties: {
         subtasks: {
@@ -70,16 +69,17 @@ interface ExecuteToolInput {
   subtasks?: { title: string }[]
 }
 
-function executeTool(name: string, input: ExecuteToolInput): unknown {
+function executeTool(name: string, input: Record<string, unknown>): unknown {
+  const i = input as ExecuteToolInput
   switch (name) {
     case 'get_task_details':
-      return tool_get_task_details(input.task_id!)
+      return tool_get_task_details(i.task_id!)
     case 'assess_clarity':
-      return tool_assess_clarity(input.title!, input.description!)
+      return tool_assess_clarity(i.title!, i.description!)
     case 'get_similar_tasks':
-      return tool_get_similar_tasks(input.keywords!)
+      return tool_get_similar_tasks(i.keywords!)
     case 'validate_subtasks':
-      return tool_validate_subtasks(input.subtasks!)
+      return tool_validate_subtasks(i.subtasks!)
     default:
       return { error: `Unknown tool: ${name}` }
   }
@@ -89,9 +89,9 @@ export async function runDecompositionAgent(
   taskId: string,
   userClarification?: string
 ): Promise<DecomposeResponse> {
-  const apiKey = await getAgentApiKey()
-  if (!apiKey) throw new Error('No AI API key configured. Add your Anthropic key in Settings.')
-  const client = new Anthropic({ apiKey })
+  const providerInfo = await getActiveProvider()
+  if (!providerInfo) throw new Error('No AI API key configured. Add a key in Settings.')
+
   const steps: AgentStep[] = []
   const startTime = Date.now()
 
@@ -99,10 +99,10 @@ export async function runDecompositionAgent(
     ? `\n\nThe user has provided clarification: "${userClarification}"\nProceed directly to generating subtasks.`
     : ''
 
-  const messages: Anthropic.MessageParam[] = [
-    {
-      role: 'user',
-      content: `You are a task decomposition agent for an engineering team.
+  const rawText = await runAgentLoop({
+    ...providerInfo,
+    tools: TOOLS,
+    userMessage: `You are a task decomposition agent for an engineering team.
 
 Task ID: ${taskId}${clarificationContext}
 
@@ -123,42 +123,9 @@ Subtask guidelines:
 - Subtasks should be ordered logically (setup → implementation → testing)
 - Each subtask should take 1-4 hours
 - Include testing/verification subtasks where appropriate`,
-    },
-  ]
-
-  let response = await client.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 2000,
-    tools: TOOLS,
-    messages,
+    executor: executeTool,
+    onStep: step => steps.push(step),
   })
-
-  while (response.stop_reason === 'tool_use') {
-    const toolUseBlocks = response.content.filter(
-      (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use'
-    )
-
-    const toolResults: Anthropic.ToolResultBlockParam[] = []
-
-    for (const block of toolUseBlocks) {
-      const result = executeTool(block.name, block.input as ExecuteToolInput)
-      steps.push({ tool: block.name, input: block.input, output: result })
-      toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(result) })
-    }
-
-    messages.push({ role: 'assistant', content: response.content })
-    messages.push({ role: 'user', content: toolResults })
-
-    response = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 2000,
-      tools: TOOLS,
-      messages,
-    })
-  }
-
-  const textBlock = response.content.find((b): b is Anthropic.TextBlock => b.type === 'text')
-  const rawText = textBlock?.text ?? '{}'
 
   let parsed: { type: string; questions?: string[]; subtasks?: { title: string }[] }
   try {

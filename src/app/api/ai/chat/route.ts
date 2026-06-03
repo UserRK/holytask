@@ -1,9 +1,8 @@
 import { NextRequest } from 'next/server'
 import { getAllTasks } from '@/lib/tasks'
 import { getSubtasksByTaskId } from '@/lib/subtasks'
-import { streamChatCompletion, getFallbackProvider } from '@/lib/llm'
-import { getActiveAiSetting } from '@/lib/aiSettings'
-import { requireUser } from '@/lib/apiAuth'
+import { streamChatCompletion } from '@/lib/llm'
+import { requireUser, getActiveProvider } from '@/lib/apiAuth'
 
 function buildSystemPrompt(): string {
   const tasks = getAllTasks({ status: 'all', sort: 'date' })
@@ -36,19 +35,8 @@ export async function POST(req: NextRequest) {
   try {
     const { messages } = await req.json()
 
-    // Resolve active provider: user setting → env fallback
-    let providerConfig: { provider: string; apiKey: string; model: string } | null = null
-
-    if (user) {
-      const setting = getActiveAiSetting(user.id)
-      if (setting) {
-        providerConfig = { provider: setting.provider, apiKey: setting.api_key, model: setting.model }
-      }
-    }
-
-    if (!providerConfig) {
-      providerConfig = getFallbackProvider()
-    }
+    void user
+    const providerConfig = await getActiveProvider()
 
     if (!providerConfig) {
       return new Response(JSON.stringify({ error: 'No AI provider configured' }), {
