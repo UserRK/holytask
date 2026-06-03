@@ -1,29 +1,74 @@
 'use client'
 
+import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
+
 interface Props {
   available: boolean
+  tooltip?: string
   children: React.ReactNode
 }
 
-const TOOLTIP = 'Add an Anthropic API key in Settings to use AI features'
+const DEFAULT_TOOLTIP = 'Add an AI API key in Settings to use AI features'
 
-export function AiGate({ available, children }: Props) {
+export function AiGate({ available, tooltip = DEFAULT_TOOLTIP, children }: Props) {
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!available) return
+    setPos(null)
+  }, [available])
+
   if (available) return <>{children}</>
 
   return (
-    <div className="relative group/gate inline-flex">
+    <div
+      ref={ref}
+      className="inline-flex relative"
+      onMouseEnter={() => {
+        if (ref.current) {
+          const r = ref.current.getBoundingClientRect()
+          setPos({ x: r.left + r.width / 2, y: r.top })
+        }
+      }}
+      onMouseLeave={() => setPos(null)}
+    >
       <div className="pointer-events-none opacity-40 select-none">
         {children}
       </div>
-      <div
-        className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 rounded-lg text-xs whitespace-nowrap
-          opacity-0 group-hover/gate:opacity-100 transition-opacity pointer-events-none z-50"
-        style={{ backgroundColor: '#1a1a1a', color: '#e2e8f0', border: '1px solid #333' }}
-      >
-        {TOOLTIP}
-        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent"
-          style={{ borderTopColor: '#1a1a1a' }} />
-      </div>
+
+      {pos && typeof document !== 'undefined' && createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            left: pos.x,
+            top: pos.y - 8,
+            transform: 'translate(-50%, -100%)',
+            zIndex: 99999,
+            backgroundColor: '#111',
+            color: '#e2e8f0',
+            border: '1px solid #333',
+            borderRadius: '8px',
+            padding: '6px 12px',
+            fontSize: '12px',
+            whiteSpace: 'nowrap',
+            pointerEvents: 'none',
+          }}
+        >
+          {tooltip}
+          <div style={{
+            position: 'absolute',
+            top: '100%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            borderWidth: '4px',
+            borderStyle: 'solid',
+            borderColor: '#111 transparent transparent transparent',
+          }} />
+        </div>,
+        document.body
+      )}
     </div>
   )
 }

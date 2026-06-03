@@ -134,7 +134,7 @@ export function ChatPanel({ pendingMessage, onPendingConsumed, aiAvailable = tru
           <div className="flex flex-col items-center justify-center h-full gap-2 px-4 text-center">
             <span style={{ fontSize: '28px', opacity: 0.3 }}>✦</span>
             <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-              Add an Anthropic API key in <strong>Settings</strong> to use the AI assistant
+              Add an AI API key in <strong>Settings</strong> to use the AI assistant
             </p>
           </div>
         ) : messages.length === 0 ? (

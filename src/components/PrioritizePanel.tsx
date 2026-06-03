@@ -79,7 +79,7 @@ export function PrioritizePanel({ onTaskClick, onApply, aiAvailable = true }: Pr
       <button
         onClick={run}
         disabled={stage.type === 'loading' || !aiAvailable}
-        title={!aiAvailable ? 'Add an Anthropic API key in Settings to use AI features' : undefined}
+        title={!aiAvailable ? 'Add an AI API key in Settings to use AI features' : undefined}
         className="flex-shrink-0 px-3 py-2 rounded-lg text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-40 flex items-center gap-1.5"
         style={{ backgroundColor: '#6366f1', color: '#fff', border: 'none' }}
       >

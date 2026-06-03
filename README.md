@@ -121,16 +121,14 @@ Built after the core requirements were met:
 - **Task comments** — threaded discussion with emoji reactions on each task
 - **Send to Slack** — posts formatted task summary to any Slack channel or DM
 - **Multi-provider AI** — configure API keys for 5 LLM providers in Settings; one active at a time
-- **Google OAuth** — optional, disabled if `AUTH_GOOGLE_ID` not set (app runs without login)
 
 ## Environment Variables
 
-**No environment variables are required to run the app.** API keys are configured through the Settings UI in the app itself and stored locally in the SQLite database.
+**No environment variables are required to run the app.** The app runs in single-user mode out of the box — no login, no setup.
 
-Optional `.env.local` variables (see `.env.example`):
-- `ANTHROPIC_API_KEY` — alternative to Settings UI; useful for automated setups
-- `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` — enables Google Sign-In
-- `SLACK_CLIENT_ID` / `SLACK_CLIENT_SECRET` — enables Slack OAuth integration
+To configure via `.env.local` instead of the Settings UI (see `.env.example`):
+- `SLACK_CLIENT_ID` / `SLACK_CLIENT_SECRET` — required for Slack OAuth integration
+- `ANTHROPIC_API_KEY` — optional alternative to configuring the key in Settings UI
 
 ## Known Limitations
 
@@ -138,4 +136,4 @@ Optional `.env.local` variables (see `.env.example`):
 - **No real-time sync** — list refreshes on mutations, not WebSocket
 - **Clarity assessment is heuristic** — keyword-based, not semantic. May trigger clarification for edge-case tasks near the 0.65 threshold. Acknowledged trade-off documented in `AGENT_LOG.md`
 - **AI latency 3-10s** — loading states shown throughout
-- **Auth is optional** — app works without Google credentials; auth was added to enable Slack per-user token storage, not as a product requirement
+- **Single-user mode** — no auth required; the app works for one user out of the box

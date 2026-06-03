@@ -32,9 +32,11 @@ export default function HomePage() {
   const [showSettings, setShowSettings] = useState(false)
   const [chatMessage, setChatMessage] = useState<string | null>(null)
   const [aiAvailable, setAiAvailable] = useState(true)
+  const [slackConnected, setSlackConnected] = useState(false)
 
   useEffect(() => {
     fetch('/api/ai/config').then(r => r.json()).then(d => setAiAvailable(d.configured)).catch(() => {})
+    fetch('/api/integrations/slack/status').then(r => r.json()).then(d => setSlackConnected(d.connected)).catch(() => {})
   }, [])
   const isFirstLoad = useRef(true)
 
@@ -239,6 +241,7 @@ export default function HomePage() {
               onSendToChat={msg => setChatMessage(msg)}
               rank={priorityRanks[selectedTask.id]}
               aiAvailable={aiAvailable}
+              slackConnected={slackConnected}
             />
           ) : (
             <div className="flex flex-col items-center justify-center h-full gap-3" style={{ color: 'var(--text-muted)' }}>

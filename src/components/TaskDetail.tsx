@@ -19,6 +19,7 @@ interface Props {
   onSendToChat?: (message: string) => void
   rank?: number
   aiAvailable?: boolean
+  slackConnected?: boolean
 }
 
 const RANK_COLORS = ['#f59e0b', '#94a3b8', '#cd7c54']
@@ -168,7 +169,7 @@ function PriorityPicker({ value, onChange }: { value: TaskPriorityType; onChange
   )
 }
 
-export function TaskDetail({ task, onClose, onUpdated, onDeleted, onSendToChat, rank, aiAvailable = true }: Props) {
+export function TaskDetail({ task, onClose, onUpdated, onDeleted, onSendToChat, rank, aiAvailable = true, slackConnected = false }: Props) {
   const [status, setStatus] = useState<TaskStatusType>(task.status)
   const [priority, setPriority] = useState<TaskPriorityType>(task.priority)
   const [assignee, setAssignee] = useState(task.assignee ?? '')
@@ -395,11 +396,13 @@ export function TaskDetail({ task, onClose, onUpdated, onDeleted, onSendToChat, 
                 ✦ Send to Assistant
               </button>
             </AiGate>
-            <button onClick={() => setShowSlackModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-opacity hover:opacity-80"
-              style={{ backgroundColor: 'rgba(74,21,75,0.25)', color: '#d4a0d6', border: '1px solid #d4a0d6' }}>
-              <SlackIcon /> Send to Slack
-            </button>
+            <AiGate available={slackConnected} tooltip="Connect Slack in Settings to use this feature">
+              <button onClick={() => setShowSlackModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-opacity hover:opacity-80"
+                style={{ backgroundColor: 'rgba(74,21,75,0.25)', color: '#d4a0d6', border: '1px solid #d4a0d6' }}>
+                <SlackIcon /> Send to Slack
+              </button>
+            </AiGate>
           </div>
         </div>
       </div>
