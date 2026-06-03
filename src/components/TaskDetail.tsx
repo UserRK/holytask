@@ -517,13 +517,16 @@ export function TaskDetail({ task, onClose, onUpdated, onDeleted, onSendToChat, 
                     ☺
                   </button>
                   {showEmojiPicker && (
-                    <div className="absolute right-0 bottom-8 rounded-xl p-2 shadow-2xl z-20 flex gap-1.5"
-                      style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}>
-                      {REACTION_EMOJIS.map(emoji => (
-                        <button key={emoji} onClick={() => { addReaction(emoji); setShowEmojiPicker(false) }}
-                          className="text-lg transition-transform hover:scale-125">{emoji}</button>
-                      ))}
-                    </div>
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setShowEmojiPicker(false)} />
+                      <div className="absolute right-0 bottom-8 rounded-xl p-2 shadow-2xl z-20 flex gap-1.5"
+                        style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}>
+                        {REACTION_EMOJIS.map(emoji => (
+                          <button key={emoji} onClick={() => { addReaction(emoji); setShowEmojiPicker(false) }}
+                            className="text-lg transition-transform hover:scale-125">{emoji}</button>
+                        ))}
+                      </div>
+                    </>
                   )}
                 </div>
                 <button

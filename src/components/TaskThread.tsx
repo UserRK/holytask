@@ -177,13 +177,16 @@ function CommentTile({
                 className="transition-opacity hover:opacity-60"
                 style={{ color: 'var(--text-muted)', fontSize: '16px', lineHeight: 1, background: 'none', border: 'none' }}>☺</button>
               {showEmoji && (
-                <div className="absolute right-0 bottom-7 rounded-xl p-2 shadow-2xl z-20 flex gap-1.5"
-                  style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}>
-                  {EMOJIS.map(emoji => (
-                    <button key={emoji} onClick={() => { addReaction(emoji); setShowEmoji(false) }}
-                      className="text-lg transition-transform hover:scale-125">{emoji}</button>
-                  ))}
-                </div>
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowEmoji(false)} />
+                  <div className="absolute right-0 bottom-7 rounded-xl p-2 shadow-2xl z-20 flex gap-1.5"
+                    style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}>
+                    {EMOJIS.map(emoji => (
+                      <button key={emoji} onClick={() => { addReaction(emoji); setShowEmoji(false) }}
+                        className="text-lg transition-transform hover:scale-125">{emoji}</button>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
             <button onClick={onReply} className="flex items-center gap-1 transition-opacity hover:opacity-60"
